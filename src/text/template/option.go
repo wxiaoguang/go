@@ -21,6 +21,20 @@ type option struct {
 	missingKey missingKeyAction
 }
 
+// onPanicAction defines how to handle template function panics.
+type onPanicAction int
+
+const (
+	panicRecover   onPanicAction = iota // Recover the panic and return it as an error
+	panicNop                            // Do nothing, let the caller handle the panic
+)
+
+type option struct {
+	missingKey missingKeyAction
+	onPanic    onPanicAction
+}
+
+
 // Option sets options for the template. Options are described by
 // strings, either a simple string or "key=value". There can be at
 // most one equals sign in an option string. If the option string
@@ -39,6 +53,13 @@ type option struct {
 //		The operation returns the zero value for the map type's element.
 //	"missingkey=error"
 //		Execution stops immediately with an error.
+//
+// onpanic: Control the behavior during execution if a panic occurs.
+//
+//	"onpanic=recover"
+//		The default behavior: Recover the panic and return it as an error.
+//	"onpanic=nop"
+//		Do nothing, let the caller handle the panic.
 func (t *Template) Option(opt ...string) *Template {
 	t.init()
 	for _, s := range opt {
@@ -64,6 +85,15 @@ func (t *Template) setOption(opt string) {
 				return
 			case "error":
 				t.option.missingKey = mapError
+				return
+			}
+		case "onpanic":
+			switch value {
+			case "recover":
+				t.option.onPanic = panicRecover
+				return
+			case "nop":
+				t.option.onPanic = panicNop
 				return
 			}
 		}
